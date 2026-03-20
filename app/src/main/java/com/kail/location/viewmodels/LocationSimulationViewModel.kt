@@ -79,7 +79,7 @@ class LocationSimulationViewModel(application: Application) : AndroidViewModel(a
     val runMode: StateFlow<String> = _runMode.asStateFlow()
 
     init {
-        _runMode.value = sharedPreferences.getString("setting_run_mode", "noroot") ?: "noroot"
+        _runMode.value = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
         _isJoystickEnabled.value = sharedPreferences.getBoolean("setting_joystick_enabled", true)
         try {
             db = dbHelper.writableDatabase
@@ -100,6 +100,11 @@ class LocationSimulationViewModel(application: Application) : AndroidViewModel(a
         val next = !_isSimulating.value
         if (next) {
             val info = locationInfo.value
+            
+            // 关键修复：启动前强制同步一次最新的运行模式
+            val currentRunMode = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
+            _runMode.value = currentRunMode
+            
             try {
                 val wgs84 = MapUtils.bd2wgs(info.longitude, info.latitude)
                 db?.let {
@@ -120,7 +125,7 @@ class LocationSimulationViewModel(application: Application) : AndroidViewModel(a
             intent.putExtra(LocationPickerActivity.ALT_MSG_ID, 55.0)
             intent.putExtra(ServiceGo.EXTRA_JOYSTICK_ENABLED, isJoystickEnabled.value)
             intent.putExtra(ServiceGo.EXTRA_COORD_TYPE, ServiceGo.COORD_BD09)
-            intent.putExtra(ServiceGo.EXTRA_RUN_MODE, runMode.value)
+            intent.putExtra(ServiceGo.EXTRA_RUN_MODE, currentRunMode)
             ContextCompat.startForegroundService(app, intent)
             _isSimulating.value = true
         } else {

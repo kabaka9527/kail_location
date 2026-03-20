@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -61,8 +63,8 @@ fun JoyStickHistoryOverlay(
         modifier = Modifier
             .width(300.dp)
             .height(500.dp)
-            .background(Color.White, RoundedCornerShape(8.dp)) // Assuming border_window is white with corners
-            // Add border if needed
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
@@ -74,19 +76,20 @@ fun JoyStickHistoryOverlay(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) // Header bg
+                .height(48.dp)
+                .background(MaterialTheme.colorScheme.primary)
         ) {
             Text(
                 text = stringResource(R.string.joystick_history_tips),
                 modifier = Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
             )
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close")
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
             }
         }
 
@@ -102,21 +105,23 @@ fun JoyStickHistoryOverlay(
                 .padding(8.dp),
             placeholder = { Text(stringResource(R.string.app_search_tips)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true
+            singleLine = true,
+            shape = RoundedCornerShape(8.dp)
         )
 
         // List
         if (historyRecords.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.history_idle))
+                Text(stringResource(R.string.history_idle), color = Color.Gray)
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(historyRecords) { record ->
                     HistoryItem(record = record, onClick = { onSelectRecord(record) })
-                    HorizontalDivider()
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp), color = Color.LightGray.copy(alpha = 0.5f))
                 }
             }
         }
@@ -187,7 +192,8 @@ fun JoyStickMapOverlay(
         modifier = Modifier
             .width(300.dp)
             .height(500.dp)
-            .background(Color.White, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
@@ -199,19 +205,20 @@ fun JoyStickMapOverlay(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                .height(48.dp)
+                .background(MaterialTheme.colorScheme.primary)
         ) {
             Text(
                 text = stringResource(R.string.joystick_map_tips),
                 modifier = Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
             )
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close")
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
             }
         }
 
@@ -228,7 +235,8 @@ fun JoyStickMapOverlay(
                 .padding(8.dp),
             placeholder = { Text(stringResource(R.string.app_search_tips)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true
+            singleLine = true,
+            shape = RoundedCornerShape(8.dp)
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -251,34 +259,39 @@ fun JoyStickMapOverlay(
                     contentColor = Color.Black,
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(painterResource(R.drawable.ic_home_position), contentDescription = "Back to Current")
+                    Icon(painterResource(R.drawable.ic_home_position), contentDescription = "Back to Current", modifier = Modifier.size(24.dp))
                 }
                 
                 FloatingActionButton(
                     onClick = onGo,
                     containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    modifier = Modifier.size(56.dp)
                 ) {
-                    Icon(painterResource(R.drawable.ic_position), contentDescription = "Go")
+                    Icon(painterResource(R.drawable.ic_position), contentDescription = "Go", modifier = Modifier.size(28.dp))
                 }
             }
             
             // Search Results Overlay
             if (showSearchResults && !searchResults.isNullOrEmpty()) {
-                LazyColumn(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .background(Color.White)
-                        .align(Alignment.TopCenter)
+                        .padding(horizontal = 8.dp)
+                        .heightIn(max = 250.dp)
+                        .align(Alignment.TopCenter),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
-                    items(searchResults) { item ->
-                        HistoryItem(record = item, onClick = {
-                            onSelectSearchResult(item)
-                            showSearchResults = false
-                            searchQuery = "" // Clear search?
-                        })
-                        HorizontalDivider()
+                    LazyColumn {
+                        items(searchResults) { item ->
+                            HistoryItem(record = item, onClick = {
+                                onSelectSearchResult(item)
+                                showSearchResults = false
+                                searchQuery = "" // Clear search?
+                            })
+                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
+                        }
                     }
                 }
             }

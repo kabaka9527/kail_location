@@ -125,7 +125,7 @@ fun RoutePlanScreen(
                     com.baidu.mapapi.map.MyLocationConfiguration(
                         com.baidu.mapapi.map.MyLocationConfiguration.LocationMode.NORMAL,
                         true,
-                        com.baidu.mapapi.map.BitmapDescriptorFactory.fromResource(R.drawable.ic_position)
+                        MapUtils.bitmapDescriptorFromVector(context, R.drawable.ic_position)
                     )
                 )
                 KailLog.i(context, "RoutePlanScreen", "Map initialized")
@@ -220,7 +220,7 @@ fun RoutePlanScreen(
                     currentMarkerOverlay?.remove()
                     val option = MarkerOptions()
                         .position(ll)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_position))
+                        .icon(MapUtils.bitmapDescriptorFromVector(context, R.drawable.ic_position))
                         .zIndex(9)
                         .draggable(false)
                     currentMarkerOverlay = map.addOverlay(option)
@@ -244,7 +244,7 @@ fun RoutePlanScreen(
 
             if (waypoints.isNotEmpty()) {
                 val start = waypoints.first()
-                val startDesc = bitmapDescriptorFromVector(context, R.drawable.icon_gcoding, AndroidColor.GREEN)
+                val startDesc = MapUtils.bitmapDescriptorFromVector(context, R.drawable.icon_gcoding, AndroidColor.GREEN)
                 if (startDesc != null) {
                     startMarkerOverlay = map.addOverlay(
                         MarkerOptions().position(start).icon(startDesc).zIndex(8).draggable(false)
@@ -601,26 +601,6 @@ fun RoutePlanScreen(
     }
 }
 
-/**
- * 将矢量资源转换为位图描述符
- * 可选地对矢量资源进行着色，返回用于地图标记的 BitmapDescriptor。
- *
- * @param context 上下文
- * @param vectorResId 矢量资源 ID
- * @param tint 可选的着色值（Android 颜色整数），为空则保持原色
- * @return 位图描述符，失败时返回 null
- */
-fun bitmapDescriptorFromVector(context: Context, vectorResId: Int, tint: Int? = null): BitmapDescriptor? {
-    val vectorDrawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
-    vectorDrawable.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
-    if (tint != null) {
-        DrawableCompat.setTint(vectorDrawable, tint)
-    }
-    val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    vectorDrawable.draw(canvas)
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
-}
 
 /**
  * 地图控制按钮

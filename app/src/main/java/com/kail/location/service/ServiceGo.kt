@@ -20,12 +20,14 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.baidu.mapapi.model.LatLng
+import android.widget.Toast
 import android.util.Log
 import com.kail.location.views.locationpicker.LocationPickerActivity
 import com.kail.location.R
 import com.kail.location.utils.GoUtils
 import com.kail.location.utils.KailLog
-import com.kail.location.views.joystick.JoyStick
+import com.kail.location.viewmodels.JoystickViewModel
+import com.kail.location.views.joystick.JoystickWindowManager
 import kotlin.math.abs
 import kotlin.math.cos
 import com.kail.location.utils.MapUtils
@@ -54,7 +56,8 @@ class ServiceGo : Service() {
     private var mNotification: Notification? = null
 
     // 摇杆相关
-    private lateinit var mJoyStick: JoyStick
+    private lateinit var mJoystickManager: JoystickWindowManager
+    private lateinit var mJoystickViewModel: JoystickViewModel
 
     private val mBinder = ServiceGoBinder()
     private var mRoutePoints: MutableList<Pair<Double, Double>> = mutableListOf()
@@ -187,10 +190,10 @@ class ServiceGo : Service() {
             initJoyStick()
             if (joystickEnabledPref) {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
-                    mJoyStick.show()
+                    mJoystickManager.show()
                 }
             } else {
-                mJoyStick.hide()
+                mJoystickManager.hide()
             }
         } catch (e: Throwable) {
             KailLog.e(this, "ServiceGo", "Error initializing JoyStick: ${e.message}")
@@ -219,8 +222,8 @@ class ServiceGo : Service() {
                     CONTROL_PAUSE -> {
                         try {
                             isStop = true
-                            if (this::mJoyStick.isInitialized) {
-                                mJoyStick.setRoutePauseState(true)
+                            if (this::mJoystickManager.isInitialized) {
+                                mJoystickManager.setRoutePauseState(true)
                             }
                             broadcastStatus()
                             KailLog.log(this, "ServiceGo", "Paused simulation (isStop=true)", isHighFrequency = false)
@@ -232,8 +235,8 @@ class ServiceGo : Service() {
                     CONTROL_RESUME -> {
                         try {
                             isStop = false
-                            if (this::mJoyStick.isInitialized) {
-                                mJoyStick.setRoutePauseState(false)
+                            if (this::mJoystickManager.isInitialized) {
+                                mJoystickManager.setRoutePauseState(false)
                             }
                             broadcastStatus()
                             KailLog.log(this, "ServiceGo", "Resumed simulation (isStop=false)", isHighFrequency = false)
@@ -438,21 +441,21 @@ class ServiceGo : Service() {
 
             startLocationLoop()
 
-            if (this::mJoyStick.isInitialized) {
+            if (this::mJoystickManager.isInitialized) {
                 try {
-                    mJoyStick.setCurrentPosition(mCurLng, mCurLat, mCurAlt)
+                    mJoystickViewModel.setCurrentPosition(mCurLng, mCurLat, mCurAlt)
                     if (joystickEnabled) {
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
                             if (mRoutePoints.isNotEmpty()) {
-                                mJoyStick.showRouteControl(mSpeed * 3.6) // Show Route Control if route exists
+                                mJoystickManager.showRouteControl(mSpeed * 3.6) // Show Route Control if route exists
                             } else {
-                                mJoyStick.show() // Show Manual Joystick otherwise
+                                mJoystickManager.show() // Show Manual Joystick otherwise
                             }
                         } else {
                             GoUtils.DisplayToast(applicationContext, "请授予悬浮窗权限")
                         }
                     } else {
-                        mJoyStick.hide()
+                        mJoystickManager.hide()
                     }
                 } catch (e: Exception) {
                     KailLog.e(this, "ServiceGo", "Error setting current position or showing joystick: ${e.message}")
@@ -484,8 +487,8 @@ class ServiceGo : Service() {
                 mLocHandlerThread.quit()
             }
 
-            if (this::mJoyStick.isInitialized) {
-                mJoyStick.destroy()
+            if (this::mJoystickManager.isInitialized) {
+                mJoystickManager.destroy()
             }
 
             if (mRunMode != "root") {
@@ -584,8 +587,8 @@ class ServiceGo : Service() {
      * 初始化摇杆并设置监听器。
      */
     private fun initJoyStick() {
-        mJoyStick = JoyStick(this)
-        mJoyStick.setListener(object : JoyStick.JoyStickClickListener {
+        mJoystickViewModel = JoystickViewModel(application)
+        mJoystickManager = JoystickWindowManager(this, mJoystickViewModel, object : JoystickViewModel.ActionListener {
             override fun onMoveInfo(speed: Double, disLng: Double, disLat: Double, angle: Double) {
                 mSpeed = speed
                 val next = GeoPredict.nextByDisplacementKm(mCurLng, mCurLat, disLng, disLat)
@@ -617,7 +620,6 @@ class ServiceGo : Service() {
                 mSpeed = speed / 3.6 // km/h to m/s
             }
         })
-        // mJoyStick.show() // Removed to avoid unconditional show on init
     }
 
     /**
@@ -940,7 +942,7 @@ class ServiceGo : Service() {
      * 更新摇杆悬浮窗的路线进度与当前位置展示。
      */
     private fun updateJoystickStatus() {
-        if (this::mJoyStick.isInitialized && mRoutePoints.isNotEmpty()) {
+        if (this::mJoystickManager.isInitialized && mRoutePoints.isNotEmpty()) {
             val currentDist = if (mRouteIndex < mRouteCumulativeDistances.size)
                 mRouteCumulativeDistances[mRouteIndex] + mSegmentProgressMeters
             else mTotalDistance
@@ -954,7 +956,7 @@ class ServiceGo : Service() {
             val bd = MapUtils.wgs2bd(mCurLng, mCurLat)
             val latLng = LatLng(bd[1], bd[0])
 
-            mJoyStick.updateRouteStatus(progress, displayStr, latLng)
+            mJoystickManager.updateRouteStatus(progress, displayStr, latLng)
         }
     }
 
@@ -1002,6 +1004,11 @@ class ServiceGo : Service() {
             }
         } catch (e: Exception) {
             KailLog.e(this, "ServiceGo", "addTestProviderGPS error: ${e.message}")
+            if (e.message?.contains("not allowed to perform MOCK_LOCATION") == true) {
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this, "请在开发者选项中设置此应用为模拟位置应用", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -1082,6 +1089,11 @@ class ServiceGo : Service() {
             }
         } catch (e: SecurityException) {
             KailLog.e(this, "ServiceGo", "addTestProviderNetwork error: ${e.message}")
+            if (e.message?.contains("not allowed to perform MOCK_LOCATION") == true) {
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this, "请在开发者选项中设置此应用为模拟位置应用", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -1126,10 +1138,10 @@ class ServiceGo : Service() {
             val action = intent.action
             if (action != null) {
                 if (action == SERVICE_GO_NOTE_ACTION_JOYSTICK_SHOW) {
-                    mJoyStick.show()
+                    mJoystickManager.show()
                 }
                 if (action == SERVICE_GO_NOTE_ACTION_JOYSTICK_HIDE) {
-                    mJoyStick.hide()
+                    mJoystickManager.hide()
                 }
             }
         }

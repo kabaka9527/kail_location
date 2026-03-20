@@ -1,5 +1,12 @@
 package com.kail.location.utils
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
+import com.baidu.mapapi.map.BitmapDescriptor
+import com.baidu.mapapi.map.BitmapDescriptorFactory
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -7,6 +14,29 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 object MapUtils {
+    /**
+     * 将矢量资源转换为位图描述符
+     * 可选地对矢量资源进行着色，返回用于地图标记的 BitmapDescriptor。
+     *
+     * @param context 上下文
+     * @param vectorResId 矢量资源 ID
+     * @param tint 可选的着色值（Android 颜色整数），为空则保持原色
+     * @return 位图描述符，失败时返回 null
+     */
+    @JvmStatic
+    fun bitmapDescriptorFromVector(context: Context, vectorResId: Int, tint: Int? = null): BitmapDescriptor? {
+        val vectorDrawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
+        vectorDrawable.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
+        if (tint != null) {
+            DrawableCompat.setTint(vectorDrawable, tint)
+        }
+        val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        vectorDrawable.draw(canvas)
+        val descriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
+        bitmap.recycle() // BitmapDescriptorFactory.fromBitmap usually copies the bitmap or holds its own reference
+        return descriptor
+    }
     // 坐标转换相关
     const val pi = 3.14159265358979324
     const val a = 6378245.0

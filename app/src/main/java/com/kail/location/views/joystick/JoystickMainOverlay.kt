@@ -10,8 +10,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,9 +32,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.text.font.FontWeight
 import androidx.preference.PreferenceManager
 import com.kail.location.R
+import com.kail.location.viewmodels.JoystickViewModel
 import com.kail.location.viewmodels.SettingsViewModel
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -51,120 +63,153 @@ import kotlin.math.sqrt
  */
 @Composable
 fun JoyStickOverlay(
+    viewModel: JoystickViewModel,
     onMoveInfo: (Boolean, Double, Double) -> Unit, // auto, angle, r
-    onSpeedChange: (Double) -> Unit,
-    onWindowDrag: (Float, Float) -> Unit,
-    onOpenMap: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onClose: () -> Unit // Not used in current XML but good to have
+    onWindowDrag: (Float, Float) -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     
     // Settings
     val joystickType = remember { prefs.getString(SettingsViewModel.KEY_JOYSTICK_TYPE, "0") ?: "0" }
-    
-    // State
-    var currentMode by remember { mutableStateOf(JoyStickMode.WALK) }
-    
-    // Initial speed
-    LaunchedEffect(Unit) {
-        val speed = getSpeedForMode(context, prefs, JoyStickMode.WALK)
-        onSpeedChange(speed)
-    }
+    val speed by viewModel.speed.collectAsState()
+    var showSpeedSettings by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    onWindowDrag(dragAmount.x, dragAmount.y)
-                }
-            },
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.wrapContentSize(),
+        horizontalAlignment = Alignment.Start
     ) {
-        // Top Row: Move, History, Map
         Row(
-            modifier = Modifier.padding(bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircleIconButton(
-                iconRes = R.drawable.ic_move,
-                contentDescription = "Move",
-                onClick = { /* Drag handled by parent pointerInput */ },
-                modifier = Modifier.pointerInput(Unit) {
+            modifier = Modifier
+                .wrapContentSize()
+                .background(Color(0xCC000000), RoundedCornerShape(16.dp))
+                .padding(8.dp)
+                .pointerInput(Unit) {
                     detectDragGestures { change, dragAmount ->
                         change.consume()
                         onWindowDrag(dragAmount.x, dragAmount.y)
                     }
-                }
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            CircleIconButton(
-                iconRes = R.drawable.ic_history,
-                contentDescription = "History",
-                onClick = onOpenHistory
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            CircleIconButton(
-                iconRes = R.drawable.ic_map,
-                contentDescription = "Map",
-                onClick = onOpenMap
-            )
-        }
-
-        // Center: Rocker or Buttons
-        Box(
-            modifier = Modifier.padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
+                },
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (joystickType == "0") {
-                Rocker(
-                    modifier = Modifier.size(140.dp), // Approx 140dp based on XML usage
-                    onUpdate = onMoveInfo
+            // Left Column: Speed Settings, History, Map
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                CircleIconButton(
+                    iconRes = R.drawable.ic_menu_settings,
+                    contentDescription = "Speed Settings",
+                    onClick = { showSpeedSettings = !showSpeedSettings }
                 )
-            } else {
-                DirectionalButtons(
-                    onUpdate = onMoveInfo
+                CircleIconButton(
+                    iconRes = R.drawable.ic_history,
+                    contentDescription = "History",
+                    onClick = { viewModel.setWindowType(JoystickViewModel.WindowType.HISTORY) }
                 )
+                CircleIconButton(
+                    iconRes = R.drawable.ic_map,
+                    contentDescription = "Map",
+                    onClick = { viewModel.setWindowType(JoystickViewModel.WindowType.MAP) }
+                )
+            }
+
+            // Right Side: Rocker or Buttons
+            Box(
+                contentAlignment = Alignment.Center
+            ) {
+                if (joystickType == "0") {
+                    Rocker(
+                        modifier = Modifier.size(100.dp),
+                        onUpdate = onMoveInfo
+                    )
+                } else {
+                    DirectionalButtons(
+                        onUpdate = onMoveInfo
+                    )
+                }
             }
         }
 
-        // Bottom Row: Walk, Run, Bike
-        Row(
-            modifier = Modifier.padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircleIconButton(
-                iconRes = R.drawable.ic_walk,
-                contentDescription = "Walk",
-                isSelected = currentMode == JoyStickMode.WALK,
-                onClick = {
-                    currentMode = JoyStickMode.WALK
-                    onSpeedChange(getSpeedForMode(context, prefs, JoyStickMode.WALK))
-                }
+        if (showSpeedSettings) {
+            Spacer(modifier = Modifier.height(8.dp))
+            SpeedSettingsPanel(
+                speed = speed,
+                onSpeedChange = { newSpeed ->
+                    viewModel.setSpeed(newSpeed)
+                    // Persist to SharedPreferences so ViewModel can listen or just update via VM
+                    prefs.edit().putString(SettingsViewModel.KEY_JOYSTICK_SPEED, newSpeed.toString()).apply()
+                },
+                onClose = { showSpeedSettings = false }
             )
-            Spacer(modifier = Modifier.width(20.dp)) // layout_weight logic replaced by spacer
-            CircleIconButton(
-                iconRes = R.drawable.ic_run,
-                contentDescription = "Run",
-                isSelected = currentMode == JoyStickMode.RUN,
-                onClick = {
-                    currentMode = JoyStickMode.RUN
-                    onSpeedChange(getSpeedForMode(context, prefs, JoyStickMode.RUN))
+        }
+    }
+}
+
+@Composable
+fun SpeedSettingsPanel(
+    speed: Double, // in m/s
+    onSpeedChange: (Double) -> Unit,
+    onClose: () -> Unit
+) {
+    // Convert m/s to km/h for the UI slider
+    val speedKmh = (speed * 3.6).toFloat()
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xCC000000)),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.width(240.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "摇杆速度: ${String.format("%.1f", speedKmh)} km/h",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = "Close",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Slider(
+                value = speedKmh.coerceIn(0f, 300f),
+                onValueChange = { newValueKmh ->
+                    // Convert km/h back to m/s for internal logic
+                    val newValueMs = newValueKmh.toDouble() / 3.6
+                    onSpeedChange(newValueMs)
+                },
+                valueRange = 0f..300f,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = MaterialTheme.colorScheme.secondary,
+                    inactiveTrackColor = Color.Gray
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.width(20.dp))
-            CircleIconButton(
-                iconRes = R.drawable.ic_bike,
-                contentDescription = "Bike",
-                isSelected = currentMode == JoyStickMode.BIKE,
-                onClick = {
-                    currentMode = JoyStickMode.BIKE
-                    onSpeedChange(getSpeedForMode(context, prefs, JoyStickMode.BIKE))
-                }
-            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("0", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+                Text("300", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+            }
         }
     }
 }
@@ -287,20 +332,18 @@ fun Rocker(
         }
         
         // Overlay Icon
+        val density = LocalDensity.current
         Image(
             painter = if (isAuto) lockCloseIcon else lockOpenIcon,
             contentDescription = null,
             modifier = Modifier
-                .size((innerRadius * 2 / LocalContext.current.resources.displayMetrics.density).dp) // Convert px to dp? No, usage logic needed.
-                // Better: Use Layout to position
-                .align(Alignment.TopStart) // Placeholder, we need absolute positioning
                 .offset { 
-                    androidx.compose.ui.unit.IntOffset(
+                    IntOffset(
                         (innerCenter.x - innerRadius).toInt(),
                         (innerCenter.y - innerRadius).toInt()
                     )
                 }
-                .size(40.dp) // Approximate size
+                .size(with(density) { (innerRadius * 2).toDp() })
                 .alpha(0.8f)
         )
     }
@@ -394,7 +437,7 @@ fun DirectionalButtons(
 
     val context = LocalContext.current
     val accentColor = MaterialTheme.colorScheme.secondary
-    val defaultColor = Color.Black
+    val defaultColor = Color.White
 
     // Helper to handle direction clicks
     fun onDirectionClick(angle: Double) {
@@ -416,10 +459,10 @@ fun DirectionalButtons(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // Row 1: NW, N, NE
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             DirectionButton(
                 iconRes = R.drawable.ic_left_up,
                 isActive = isLocked && activeDirection == 135.0,
@@ -437,7 +480,7 @@ fun DirectionalButtons(
             )
         }
         // Row 2: W, Center, E
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             DirectionButton(
                 iconRes = R.drawable.ic_left,
                 isActive = isLocked && activeDirection == 180.0,
@@ -456,13 +499,15 @@ fun DirectionalButtons(
                         isLocked = true
                     }
                 },
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
             ) {
                 Icon(
                     painter = painterResource(if (isLocked) R.drawable.ic_lock_close else R.drawable.ic_lock_open),
                     contentDescription = "Lock/Unlock",
                     tint = if (isLocked) accentColor else defaultColor,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
             DirectionButton(
@@ -472,7 +517,7 @@ fun DirectionalButtons(
             )
         }
         // Row 3: SW, S, SE
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             DirectionButton(
                 iconRes = R.drawable.ic_left_down,
                 isActive = isLocked && activeDirection == 225.0,
@@ -505,16 +550,18 @@ fun DirectionButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val tint = if (isActive) MaterialTheme.colorScheme.secondary else Color.Black
+    val tint = if (isActive) MaterialTheme.colorScheme.secondary else Color.White
     IconButton(
         onClick = onClick,
-        modifier = Modifier.size(48.dp)
+        modifier = Modifier
+            .size(40.dp)
+            .background(Color.White.copy(alpha = 0.1f), CircleShape)
     ) {
         Icon(
             painter = painterResource(iconRes),
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -536,8 +583,8 @@ fun CircleIconButton(
     modifier: Modifier = Modifier,
     isSelected: Boolean = false
 ) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.LightGray.copy(alpha = 0.5f)
-    val tint = if (isSelected) Color.White else Color.Black
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.White.copy(alpha = 0.1f)
+    val tint = Color.White
 
     Box(
         modifier = modifier
@@ -553,17 +600,5 @@ fun CircleIconButton(
             tint = tint,
             modifier = Modifier.size(24.dp)
         )
-    }
-}
-
-enum class JoyStickMode {
-    WALK, RUN, BIKE
-}
-
-fun getSpeedForMode(context: Context, prefs: SharedPreferences, mode: JoyStickMode): Double {
-    return when (mode) {
-        JoyStickMode.WALK -> prefs.getString(SettingsViewModel.KEY_WALK_SPEED, "1.2")?.toDoubleOrNull() ?: 1.2
-        JoyStickMode.RUN -> prefs.getString(SettingsViewModel.KEY_RUN_SPEED, "3.6")?.toDoubleOrNull() ?: 3.6
-        JoyStickMode.BIKE -> prefs.getString(SettingsViewModel.KEY_BIKE_SPEED, "10.0")?.toDoubleOrNull() ?: 10.0
     }
 }

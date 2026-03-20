@@ -91,7 +91,7 @@ class RouteSimulationViewModel(application: Application) : AndroidViewModel(appl
     }
     
     init {
-        _runMode.value = sharedPreferences.getString("setting_run_mode", "noroot") ?: "noroot"
+        _runMode.value = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
         loadSettings()
         loadRoutes()
 
@@ -248,13 +248,17 @@ class RouteSimulationViewModel(application: Application) : AndroidViewModel(appl
         val points = getSelectedRoutePoints() ?: return false
         if (points.size < 4) return false
 
+        // 关键修复：启动前强制同步一次最新的运行模式
+        val currentRunMode = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
+        _runMode.value = currentRunMode
+
         val intent = Intent(app, ServiceGo::class.java)
         intent.putExtra(ServiceGo.EXTRA_ROUTE_POINTS, points)
         intent.putExtra(ServiceGo.EXTRA_ROUTE_LOOP, settings.value.isLoop)
         intent.putExtra(ServiceGo.EXTRA_JOYSTICK_ENABLED, false)
         intent.putExtra(ServiceGo.EXTRA_ROUTE_SPEED, settings.value.speed)
         intent.putExtra(ServiceGo.EXTRA_COORD_TYPE, ServiceGo.COORD_BD09)
-        intent.putExtra(ServiceGo.EXTRA_RUN_MODE, runMode.value)
+        intent.putExtra(ServiceGo.EXTRA_RUN_MODE, currentRunMode)
         intent.putExtra(ServiceGo.EXTRA_SPEED_FLUCTUATION, settings.value.speedFluctuation)
         intent.putExtra(ServiceGo.EXTRA_STEP_ENABLED, settings.value.stepFreqSimulation)
         intent.putExtra(ServiceGo.EXTRA_STEP_FREQ, settings.value.stepFreq)

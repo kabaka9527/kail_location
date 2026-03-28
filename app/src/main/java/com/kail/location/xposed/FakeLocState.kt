@@ -129,10 +129,18 @@ internal object FakeLocState {
                 android.util.Log.i("NativeHook", "Loading library from: $path")
                 System.load(path)
                 nativeLibraryLoaded = true
-                android.util.Log.i("NativeHook", "Library loaded, now calling nativeSetGaitParams...")
+                android.util.Log.i("NativeHook", "Library loaded, calling nativeInitHook...")
                 Log.i(TAG, "Native library loaded successfully: $path")
                 
-                // Initialize with current params
+                // Initialize hook and sensor simulator
+                try {
+                    nativeInitHook()
+                    android.util.Log.i("NativeHook", "nativeInitHook completed")
+                } catch (e: Exception) {
+                    android.util.Log.e("NativeHook", "nativeInitHook failed: ${e.message}")
+                }
+                
+                // Set current params
                 val spm = stepCadenceSpmRef.get()
                 val mode = gaitModeRef.get()
                 val enabled = stepEnabledRef.get()
@@ -201,4 +209,5 @@ internal object FakeLocState {
     // Native methods (implemented in C++)
     private external fun nativeSetGaitParams(spm: Float, mode: Int, enable: Boolean)
     private external fun nativeReloadConfig(): Boolean
+    private external fun nativeInitHook()
 }

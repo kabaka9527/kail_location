@@ -211,6 +211,38 @@ void SensorSimulator::ProcessSensorEvents(sensors_event_t* events, size_t count)
     }
 }
 
+void SensorSimulator::ProcessSensorEvent(sensors_event_t& e) {
+    if (!config_.enable) return;
+    if (!initialized_.load()) {
+        Init();
+    }
+    
+    int64_t ts = e.timestamp;
+    int64_t delta_ns = ts - last_ts_ns_;
+    last_ts_ns_ = ts;
+    
+    double dt = static_cast<double>(delta_ns) * kNsToSec;
+    if (dt < 0.0) dt = 0.0;
+    if (dt > kMaxDeltaSec) dt = kMaxDeltaSec;
+    
+    SmoothStepRate(dt);
+    AdvancePhase(dt);
+    
+    switch (e.type) {
+        case TYPE_ACCELEROMETER:
+            ApplyAccelerometer(e, dt);
+            break;
+        case TYPE_STEP_COUNTER:
+            ApplyStepCounter(e, dt);
+            break;
+        case TYPE_STEP_DETECTOR:
+            ApplyStepDetector(e, dt);
+            break;
+        default:
+            break;
+    }
+}
+
 bool SensorSimulator::ReloadConfig() {
     FILE* fp = std::fopen(kConfigPath, "re");
     if (!fp) {

@@ -48,6 +48,8 @@ public:
     
     void ProcessSensorEvents(sensors_event_t* events, size_t count);
     
+    void ProcessSensorEvent(sensors_event_t& event);
+    
     bool ReloadConfig();
     
     GaitConfig GetConfig() const;

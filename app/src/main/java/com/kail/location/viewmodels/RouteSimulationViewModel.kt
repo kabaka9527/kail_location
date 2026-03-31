@@ -69,7 +69,7 @@ class RouteSimulationViewModel(application: Application) : AndroidViewModel(appl
     val settings: StateFlow<com.kail.location.models.SimulationSettings> = _settings.asStateFlow()
 
     private val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
-    private val _runMode = MutableStateFlow("noroot")
+    private val _runMode = MutableStateFlow("root")
     val runMode: StateFlow<String> = _runMode.asStateFlow()
 
     private val _toastMessage = MutableStateFlow<String?>(null)

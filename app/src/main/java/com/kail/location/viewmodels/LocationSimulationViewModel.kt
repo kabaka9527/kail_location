@@ -80,7 +80,7 @@ class LocationSimulationViewModel(application: Application) : AndroidViewModel(a
     val runMode: StateFlow<String> = _runMode.asStateFlow()
 
     init {
-        _runMode.value = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
+        _runMode.value = sharedPreferences.getString("setting_run_mode", "noroot") ?: "noroot"
         _isJoystickEnabled.value = sharedPreferences.getBoolean("setting_joystick_enabled", true)
         try {
             db = dbHelper.writableDatabase
@@ -103,7 +103,7 @@ class LocationSimulationViewModel(application: Application) : AndroidViewModel(a
             val info = locationInfo.value
             
             // 关键修复：启动前强制同步一次最新的运行模式
-            val currentRunMode = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
+            val currentRunMode = sharedPreferences.getString("setting_run_mode", "noroot") ?: "noroot"
             _runMode.value = currentRunMode
             
             try {
@@ -134,7 +134,7 @@ class LocationSimulationViewModel(application: Application) : AndroidViewModel(a
             ContextCompat.startForegroundService(app, intent)
             _isSimulating.value = true
         } else {
-            val currentRunMode = sharedPreferences.getString("setting_run_mode", "root") ?: "root"
+            val currentRunMode = sharedPreferences.getString("setting_run_mode", "noroot") ?: "noroot"
             val serviceClass = if (currentRunMode == "root") ServiceGoRoot::class.java else ServiceGoNoroot::class.java
             app.stopService(Intent(app, serviceClass))
             _isSimulating.value = false

@@ -127,13 +127,15 @@ extern "C" void hooked_send_objects(long* param_1, void* param_2, long param_3, 
             *(float*)((char*)event + 0x20) = se.data[2];
 
             if (type == SENSOR_TYPE_STEP_COUNTER) {
-                ALOGI("STEP_COUNTER: %.0f -> %.0f", data0, se.data[0]);
+                ALOGI("🔥 STEP_COUNTER (原始) = %.0f -> (修改) = %.0f", data0, se.data[0]);
             } else if (type == SENSOR_TYPE_STEP_DETECTOR) {
-                ALOGI("STEP_DETECTOR: %.0f -> %.0f", data0, se.data[0]);
+                ALOGI("🚶 STEP_DETECTOR (原始) = %.0f -> (修改) = %.0f", data0, se.data[0]);
             } else if (type == SENSOR_TYPE_ACCELEROMETER) {
-                ALOGI("ACCEL: %.2f %.2f %.2f -> %.2f %.2f %.2f", data0, data1, data2, se.data[0], se.data[1], se.data[2]);
+                ALOGI("📡 ACCELEROMETER (原始) = %.2f %.2f %.2f -> (修改) = %.2f %.2f %.2f", 
+                      data0, data1, data2, se.data[0], se.data[1], se.data[2]);
             } else if (type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-                ALOGI("LINEAR_ACCEL: %.2f %.2f %.2f -> %.2f %.2f %.2f", data0, data1, data2, se.data[0], se.data[1], se.data[2]);
+                ALOGI("📊 LINEAR_ACCEL (原始) = %.2f %.2f %.2f -> (修改) = %.2f %.2f %.2f", 
+                      data0, data1, data2, se.data[0], se.data[1], se.data[2]);
             }
         }
     }

@@ -1,6 +1,6 @@
 路线模拟，位置模拟，导航模拟，步频模拟
 
-
+[传感器参数](传感器参数.md)
 日志在/storage/emulated/0/Documents/KailLocation/logs/
 
 [中文说明](README.md) | [English README](README_EN.md)

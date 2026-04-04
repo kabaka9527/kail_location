@@ -22,7 +22,6 @@ target_link_libraries(kail_gait_sim PRIVATE ${log-lib} dobby::dobby)
 add_library(kail_native_hook SHARED
     native_hook/sensor_simulator.cpp
     native_hook/hook.cpp
-    native_hook/elf_util.cpp
 )
 
 target_include_directories(kail_native_hook PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

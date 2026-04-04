@@ -2,12 +2,14 @@ package com.kail.location.views.joystick
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.PixelFormat
 import android.os.Build
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.*
+import androidx.preference.PreferenceManager
 import androidx.savedstate.*
 import com.baidu.mapapi.map.BaiduMap
 import com.baidu.mapapi.map.MapStatusUpdateFactory
@@ -18,6 +20,7 @@ import com.kail.location.utils.GoUtils
 import com.kail.location.utils.KailLog
 import com.kail.location.utils.MapUtils
 import com.kail.location.viewmodels.JoystickViewModel
+import com.kail.location.viewmodels.SettingsViewModel
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -82,7 +85,7 @@ class JoystickWindowManager(
             setContent {
                 JoystickRoot(
                     viewModel = viewModel,
-                    mapView = mapView,
+                    mapView = routeMapView,
                     actionListener = listener,
                     onMoveInfo = { auto, angle, r -> processDirection(auto, angle, r) },
                     onWindowDrag = { dx, dy -> updateWindowPosition(dx, dy) },
@@ -94,6 +97,9 @@ class JoystickWindowManager(
 
     private fun initMapViews() {
         try {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val mapZoom = prefs.getString(SettingsViewModel.KEY_MAP_ZOOM, "17")?.toFloatOrNull() ?: 17f
+
             mapView = MapView(context).apply {
                 showZoomControls(false)
                 map.isMyLocationEnabled = true
@@ -102,9 +108,11 @@ class JoystickWindowManager(
                     override fun onMapPoiClick(poi: com.baidu.mapapi.map.MapPoi) { viewModel.updateMarkLocation(poi.position) }
                 })
             }
+
             routeMapView = MapView(context).apply {
                 showZoomControls(false)
                 map.isMyLocationEnabled = true
+                map.setMapStatus(MapStatusUpdateFactory.zoomTo(mapZoom))
             }
         } catch (e: Exception) {
             KailLog.e(context, "JoystickWindowManager", "Map initialization error: ${e.message}")

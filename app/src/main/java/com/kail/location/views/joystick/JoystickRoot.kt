@@ -83,7 +83,8 @@ fun JoystickRoot(
                     viewModel.setRouteSpeed(speed)
                     actionListener.onRouteSpeedChange(speed)
                 },
-                onWindowDrag = onWindowDrag
+                onWindowDrag = onWindowDrag,
+                onClose = onClose
             )
         }
     }

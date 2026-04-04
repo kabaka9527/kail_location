@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import com.baidu.mapapi.map.MapView
 import com.kail.location.R
 
@@ -41,12 +42,13 @@ fun FloatingNavigationControlOverlay(
     onRestart: () -> Unit,
     onSeek: (Float) -> Unit,
     onSpeedChange: (Double) -> Unit,
-    onWindowDrag: (Float, Float) -> Unit
+    onWindowDrag: (Float, Float) -> Unit,
+    onClose: () -> Unit
 ) {
     var showSettings by remember { mutableStateOf(false) }
     var currentSpeed by remember { mutableStateOf(speed) }
 
-    Column(
+    Box(
         modifier = Modifier
             .wrapContentSize()
             .pointerInput(Unit) {
@@ -56,6 +58,23 @@ fun FloatingNavigationControlOverlay(
                 }
             }
     ) {
+        // Close Button (Top Right) - placed first to be on top
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(24.dp)
+                .padding(4.dp)
+                .zIndex(1f)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close",
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
         // Main Control Row
         Row(
             modifier = Modifier

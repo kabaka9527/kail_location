@@ -49,6 +49,7 @@ fun SettingsScreen(
     val baiduMapKey by viewModel.baiduMapKey.collectAsState()
     val writeOffset by viewModel.writeOffset.collectAsState()
     val convertOffset by viewModel.convertOffset.collectAsState()
+    val mapZoom by viewModel.mapZoom.collectAsState()
 
     Scaffold(
         topBar = {
@@ -172,6 +173,13 @@ fun SettingsScreen(
                 title = "历史记录有效期(天)", // setting_history_expiration
                 value = historyExpiration,
                 onValueChange = { viewModel.updateStringPreference(SettingsViewModel.KEY_HISTORY_EXPIRATION, it) }
+            )
+
+            EditTextPreference(
+                title = "悬浮窗地图缩放比例",
+                value = mapZoom,
+                onValueChange = { viewModel.updateStringPreference(SettingsViewModel.KEY_MAP_ZOOM, it) },
+                description = "范围 10-21，数值越大地图越详细"
             )
 
             ListItem(

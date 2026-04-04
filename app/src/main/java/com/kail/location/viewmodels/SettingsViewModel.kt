@@ -34,6 +34,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         const val KEY_BAIDU_MAP_KEY = "setting_baidu_map_key"
         const val KEY_WRITE_OFFSET = "setting_write_offset"
         const val KEY_CONVERT_OFFSET = "setting_convert_offset"
+        const val KEY_MAP_ZOOM = "setting_map_zoom"
     }
 
     private val _writeOffset = MutableStateFlow(prefs.getString(KEY_WRITE_OFFSET, "") ?: "")
@@ -92,6 +93,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     /** 历史记录保留天数偏好的状态流。 */
     val historyExpiration: StateFlow<String> = _historyExpiration.asStateFlow()
 
+    private val _mapZoom = MutableStateFlow(prefs.getString(KEY_MAP_ZOOM, "17") ?: "17")
+    /** 悬浮窗地图缩放比例偏好的状态流。 */
+    val mapZoom: StateFlow<String> = _mapZoom.asStateFlow()
+
     /** 应用版本号（字符串）。 */
     val appVersion: String = GoUtils.getVersionName(application)
 
@@ -111,6 +116,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             KEY_HISTORY_EXPIRATION -> _historyExpiration.value = sharedPreferences.getString(key, "7.0") ?: "7.0"
             KEY_WRITE_OFFSET -> _writeOffset.value = sharedPreferences.getString(key, "") ?: ""
             KEY_CONVERT_OFFSET -> _convertOffset.value = sharedPreferences.getString(key, "") ?: ""
+            KEY_MAP_ZOOM -> _mapZoom.value = sharedPreferences.getString(key, "17") ?: "17"
         }
     }
 

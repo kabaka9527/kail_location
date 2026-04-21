@@ -12,7 +12,7 @@ If you have feature requests, please open an issue.
 This software is intended **only** for developers or professionals for debugging and testing.
 
 Contact
-https://t.me/+T_Q_1I8U71ViYTQ1
+https://t.me/kaillcation
 Email: kailkali23143@gmail.com
 
 Tech Stack

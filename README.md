@@ -10,7 +10,7 @@
 本软件仅供开发人员或专业人士调试使用。
 
 联系作者：
-https://t.me/+T_Q_1I8U71ViYTQ1
+https://t.me/kaillcation
 kailkali23143@gmail.com
 
 技术：

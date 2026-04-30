@@ -10,6 +10,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -179,15 +181,17 @@ class WelcomeActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         if (requestCode == SDK_PERMISSION_REQUEST) {
-            // 只要有定位权限，就视为通过（存储和电话权限为可选）
             val hasFineLocation = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             val hasCoarseLocation = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            
+
             if (hasFineLocation || hasCoarseLocation) {
                 isPermission = true
-                startMainActivity(true) // Retry start
+                if (hasStartedMainActivity) {
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        startMainActivity(true)
+                    }, 100)
+                }
             } else {
-                // 必要的定位权限被拒绝，引导用户去设置
                 showPermissionSettingsDialog()
             }
         }
@@ -288,7 +292,9 @@ class WelcomeActivity : AppCompatActivity() {
             return
         }
 
-        checkDefaultPermissions()
+        if (!isPermission) {
+            checkDefaultPermissions()
+        }
 
         if (isPermission) {
             hasStartedMainActivity = true

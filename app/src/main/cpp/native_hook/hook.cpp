@@ -51,7 +51,7 @@ static int step_event_counter = 0;
 void setRouteSimulationActive(bool active) {
     route_simulation_active = active;
     if (!active) {
-        gait::SensorSimulator::Get().UpdateParams(120.0f, 0, false);
+        gait::SensorSimulator::Get().UpdateParams(120.0f, 0, 0, false);
     }
 }
 
@@ -314,7 +314,7 @@ Java_com_kail_location_xposed_core_FakeLocState_nativeSetRouteSimulation(
     if (isActive) {
         current_spm = spm;
         setRouteSimulationActive(true);
-        gait::SensorSimulator::Get().UpdateParams(spm, mode, true);
+        gait::SensorSimulator::Get().UpdateParams(spm, mode, 0, true);
         isMocking = 1;
         step_event_counter = 0;
     } else {
@@ -328,10 +328,11 @@ Java_com_kail_location_xposed_core_FakeLocState_nativeSetGaitParams(
     JNIEnv* env, 
     jclass clazz, 
     jfloat spm, 
-    jint mode, 
+    jint mode,
+    jint scheme,
     jboolean enable
 ) {
-    gait::SensorSimulator::Get().UpdateParams(spm, mode, enable);
+    gait::SensorSimulator::Get().UpdateParams(spm, mode, scheme, enable);
 }
 
 JNIEXPORT jboolean JNICALL 

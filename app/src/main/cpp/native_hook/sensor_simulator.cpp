@@ -66,6 +66,7 @@ void SensorSimulator::Init() {
     
     config_.steps_per_minute = 120.0f;
     config_.mode = GaitMode::Walk;
+    config_.scheme = SimScheme::Fourier;
     config_.enable = true;
     current_spm_ = config_.steps_per_minute;
     target_spm_ = config_.steps_per_minute;
@@ -74,9 +75,10 @@ void SensorSimulator::Init() {
     ALOGI("SensorSimulator initialized");
 }
 
-void SensorSimulator::UpdateParams(float spm, int mode, bool enable) {
+void SensorSimulator::UpdateParams(float spm, int mode, int scheme, bool enable) {
     config_.steps_per_minute = spm;
     config_.mode = static_cast<GaitMode>(mode);
+    config_.scheme = static_cast<SimScheme>(scheme);
     config_.enable = enable;
     
     if (spm <= 0.0f) {
@@ -149,6 +151,11 @@ void SensorSimulator::AdvancePhase(double dt) {
 }
 
 void SensorSimulator::ApplyAccelerometer(sensors_event_t& e, double dt) {
+    if (config_.scheme == SimScheme::SineNoise) {
+        ApplyAccelerometerSine(e, dt);
+        return;
+    }
+
     (void)dt;
     
     double t = static_cast<double>(e.timestamp) * kNsToSec;
@@ -169,6 +176,11 @@ void SensorSimulator::ApplyAccelerometer(sensors_event_t& e, double dt) {
 }
 
 void SensorSimulator::ApplyLinearAcceleration(sensors_event_t& e, double dt) {
+    if (config_.scheme == SimScheme::SineNoise) {
+        ApplyLinearAccelerationSine(e, dt);
+        return;
+    }
+
     (void)dt;
     
     double t = static_cast<double>(e.timestamp) * kNsToSec;
@@ -191,6 +203,11 @@ void SensorSimulator::ApplyLinearAcceleration(sensors_event_t& e, double dt) {
 }
 
 void SensorSimulator::ApplyGyroscope(sensors_event_t& e, double dt) {
+    if (config_.scheme == SimScheme::SineNoise) {
+        ApplyGyroscopeSine(e, dt);
+        return;
+    }
+
     (void)dt;
     
     double t = static_cast<double>(e.timestamp) * kNsToSec;
@@ -205,6 +222,71 @@ void SensorSimulator::ApplyGyroscope(sensors_event_t& e, double dt) {
     d1 = d1 * (1.0 + NextSignedNoise(noise_scale));
     d2 = d2 * (1.0 + NextSignedNoise(noise_scale));
     
+    e.data[0] = static_cast<float>(d0);
+    e.data[1] = static_cast<float>(d1);
+    e.data[2] = static_cast<float>(d2);
+}
+
+void SensorSimulator::ApplyAccelerometerSine(sensors_event_t& e, double dt) {
+    (void)dt;
+
+    double t = static_cast<double>(e.timestamp) * kNsToSec;
+    double sps = static_cast<double>(current_spm_) / 60.0;
+    double omega = kTwoPi * sps;
+    double omega2 = kTwoPi * sps * 2.0;
+
+    double x = 3.0 * std::sin(omega * t);
+    double y = 1.5 * std::sin(omega * t + 1.5708);
+    double z = 3.0 * std::sin(omega2 * t + 1.2) + 9.8;
+
+    double noise_amp = 0.15;
+    x += NextSignedNoise(noise_amp);
+    y += NextSignedNoise(noise_amp);
+    z += NextSignedNoise(noise_amp);
+
+    e.data[0] = static_cast<float>(x);
+    e.data[1] = static_cast<float>(y);
+    e.data[2] = static_cast<float>(z);
+}
+
+void SensorSimulator::ApplyLinearAccelerationSine(sensors_event_t& e, double dt) {
+    (void)dt;
+
+    double t = static_cast<double>(e.timestamp) * kNsToSec;
+    double sps = static_cast<double>(current_spm_) / 60.0;
+    double omega = kTwoPi * sps;
+    double omega2 = kTwoPi * sps * 2.0;
+
+    double x = 3.0 * std::sin(omega * t);
+    double y = 1.5 * std::sin(omega * t + 1.5708);
+    double z = 3.0 * std::sin(omega2 * t + 1.2);
+
+    double noise_amp = 0.15;
+    x += NextSignedNoise(noise_amp);
+    y += NextSignedNoise(noise_amp);
+    z += NextSignedNoise(noise_amp);
+
+    e.data[0] = static_cast<float>(x);
+    e.data[1] = static_cast<float>(y);
+    e.data[2] = static_cast<float>(z);
+}
+
+void SensorSimulator::ApplyGyroscopeSine(sensors_event_t& e, double dt) {
+    (void)dt;
+
+    double t = static_cast<double>(e.timestamp) * kNsToSec;
+    double sps = static_cast<double>(current_spm_) / 60.0;
+    double omega = kTwoPi * sps;
+
+    double d0 = 12.0 * std::sin(omega * t + 0.5);
+    double d1 = 4.0 * std::sin(omega * t + 1.9);
+    double d2 = 0.6 * std::sin(omega * t + 3.0);
+
+    double noise_amp = 0.3;
+    d0 += NextSignedNoise(noise_amp);
+    d1 += NextSignedNoise(noise_amp);
+    d2 += NextSignedNoise(noise_amp);
+
     e.data[0] = static_cast<float>(d0);
     e.data[1] = static_cast<float>(d1);
     e.data[2] = static_cast<float>(d2);
@@ -337,49 +419,54 @@ void SensorSimulator::ProcessSensorEvent(sensors_event_t& e) {
     }
 }
 
-bool SensorSimulator::ReloadConfig() {
-    FILE* fp = std::fopen(kConfigPath, "re");
-    if (!fp) {
-        ALOGD("Config file not found: %s", kConfigPath);
-        return false;
-    }
-    
-    GaitConfig new_config{};
-    new_config.steps_per_minute = 120.0f;
-    new_config.mode = GaitMode::Walk;
-    new_config.enable = true;
-    
-    char line[256];
-    while (std::fgets(line, sizeof(line), fp)) {
-        char* nl = std::strchr(line, '\n');
-        if (nl) *nl = '\0';
-        if (line[0] == '\0') continue;
-        
-        char key[64] = {};
-        char val[128] = {};
-        if (std::sscanf(line, "%63[^=]=%127s", key, val) != 2) continue;
-        
-        if (std::strcmp(key, "steps_per_minute") == 0) {
-            float spm = std::strtof(val, nullptr);
-            if (spm > 0.0f) new_config.steps_per_minute = spm;
-        } else if (std::strcmp(key, "mode") == 0) {
-            if (std::strcmp(val, "walk") == 0) new_config.mode = GaitMode::Walk;
-            else if (std::strcmp(val, "run") == 0) new_config.mode = GaitMode::Run;
-            else if (std::strcmp(val, "fast_run") == 0) new_config.mode = GaitMode::FastRun;
-        } else if (std::strcmp(key, "enable") == 0) {
-            new_config.enable = (std::atoi(val) != 0);
+    bool SensorSimulator::ReloadConfig() {
+        FILE* fp = std::fopen(kConfigPath, "re");
+        if (!fp) {
+            ALOGD("Config file not found: %s", kConfigPath);
+            return false;
         }
+        
+        GaitConfig new_config{};
+        new_config.steps_per_minute = 120.0f;
+        new_config.mode = GaitMode::Walk;
+        new_config.scheme = SimScheme::Fourier;
+        new_config.enable = true;
+        
+        char line[256];
+        while (std::fgets(line, sizeof(line), fp)) {
+            char* nl = std::strchr(line, '\n');
+            if (nl) *nl = '\0';
+            if (line[0] == '\0') continue;
+            
+            char key[64] = {};
+            char val[128] = {};
+            if (std::sscanf(line, "%63[^=]=%127s", key, val) != 2) continue;
+            
+            if (std::strcmp(key, "steps_per_minute") == 0) {
+                float spm = std::strtof(val, nullptr);
+                if (spm > 0.0f) new_config.steps_per_minute = spm;
+            } else if (std::strcmp(key, "mode") == 0) {
+                if (std::strcmp(val, "walk") == 0) new_config.mode = GaitMode::Walk;
+                else if (std::strcmp(val, "run") == 0) new_config.mode = GaitMode::Run;
+                else if (std::strcmp(val, "fast_run") == 0) new_config.mode = GaitMode::FastRun;
+            } else if (std::strcmp(key, "scheme") == 0) {
+                if (std::strcmp(val, "fourier") == 0) new_config.scheme = SimScheme::Fourier;
+                else if (std::strcmp(val, "sine_noise") == 0) new_config.scheme = SimScheme::SineNoise;
+            } else if (std::strcmp(key, "enable") == 0) {
+                new_config.enable = (std::atoi(val) != 0);
+            }
+        }
+        
+        std::fclose(fp);
+        
+        config_ = new_config;
+        target_spm_ = config_.steps_per_minute;
+        
+        ALOGI("Config reloaded: spm=%.2f, mode=%d, scheme=%d, enable=%d",
+              config_.steps_per_minute, static_cast<int>(config_.mode),
+              static_cast<int>(config_.scheme), config_.enable ? 1 : 0);
+        
+        return true;
     }
-    
-    std::fclose(fp);
-    
-    config_ = new_config;
-    target_spm_ = config_.steps_per_minute;
-    
-    ALOGI("Config reloaded: spm=%.2f, mode=%d, enable=%d",
-          config_.steps_per_minute, static_cast<int>(config_.mode), config_.enable ? 1 : 0);
-    
-    return true;
-}
 
 }  // namespace gait

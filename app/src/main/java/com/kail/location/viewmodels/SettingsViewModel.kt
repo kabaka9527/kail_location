@@ -63,6 +63,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         const val KEY_HISTORY_EXPIRATION = "setting_history_expiration"
         const val KEY_BAIDU_MAP_KEY = "setting_baidu_map_key"
         const val KEY_MAP_ZOOM = "setting_map_zoom"
+        const val KEY_SIM_SCHEME = "setting_sim_scheme"
     }
 
     // 已有 StateFlow（保留）
@@ -157,6 +158,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _hideMock = MutableStateFlow(prefs.getBoolean(KEY_HIDE_MOCK, true))
     val hideMock: StateFlow<Boolean> = _hideMock.asStateFlow()
 
+    private val _simScheme = MutableStateFlow(prefs.getString(KEY_SIM_SCHEME, "0") ?: "0")
+    val simScheme: StateFlow<String> = _simScheme.asStateFlow()
+
     /** 应用版本号（字符串）。 */
     val appVersion: String = GoUtils.getVersionName(application)
 
@@ -193,6 +197,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             KEY_DISABLE_WIFI_SCAN -> _disableWifiScan.value = sharedPreferences.getBoolean(key, true)
             KEY_LOOP_BROADCAST -> _loopBroadcast.value = sharedPreferences.getBoolean(key, false)
             KEY_HIDE_MOCK -> _hideMock.value = sharedPreferences.getBoolean(key, true)
+            KEY_SIM_SCHEME -> _simScheme.value = sharedPreferences.getString(key, "0") ?: "0"
         }
     }
 

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kail.location.R
 import com.kail.location.viewmodels.SettingsViewModel
+import com.kail.location.xposed.core.FakeLocState
 
 /**
  * 设置屏幕主界面
@@ -65,6 +66,7 @@ fun SettingsScreen(
     val disableWifiScan by viewModel.disableWifiScan.collectAsState()
     val loopBroadcast by viewModel.loopBroadcast.collectAsState()
     val hideMock by viewModel.hideMock.collectAsState()
+    val simScheme by viewModel.simScheme.collectAsState()
 
     Scaffold(
         topBar = {
@@ -204,6 +206,17 @@ fun SettingsScreen(
                 checked = enableMockWifi,
                 onCheckedChange = { viewModel.updateBooleanPreference(SettingsViewModel.KEY_ENABLE_MOCK_WIFI, it) },
                 summary = "伪造 WiFi 定位数据"
+            )
+
+            ListPreference(
+                title = "传感器模拟方案",
+                currentValue = simScheme,
+                entries = arrayOf("傅里叶级数 (Fourier)", "正弦+随机扰动 (Sine+Noise)"),
+                entryValues = arrayOf("0", "1"),
+                onValueChange = {
+                    viewModel.updateStringPreference(SettingsViewModel.KEY_SIM_SCHEME, it)
+                    FakeLocState.setSimScheme(it.toIntOrNull() ?: 0)
+                }
             )
 
             // ===== Group: 拦截控制 =====

@@ -40,9 +40,15 @@ enum class GaitMode : int {
     FastRun = 2
 };
 
+enum class SimScheme : int {
+    Fourier = 0,
+    SineNoise = 1
+};
+
 struct GaitConfig {
     float steps_per_minute = 120.0f;
     GaitMode mode = GaitMode::Walk;
+    SimScheme scheme = SimScheme::Fourier;
     bool enable = true;
 };
 
@@ -52,7 +58,7 @@ public:
     
     void Init();
     
-    void UpdateParams(float spm, int mode, bool enable);
+    void UpdateParams(float spm, int mode, int scheme, bool enable);
     
     void ProcessSensorEvents(sensors_event_t* events, size_t count);
     
@@ -75,8 +81,11 @@ private:
     void AdvancePhase(double dt);
 
     void ApplyAccelerometer(sensors_event_t& e, double dt);
+    void ApplyAccelerometerSine(sensors_event_t& e, double dt);
     void ApplyLinearAcceleration(sensors_event_t& e, double dt);
+    void ApplyLinearAccelerationSine(sensors_event_t& e, double dt);
     void ApplyGyroscope(sensors_event_t& e, double dt);
+    void ApplyGyroscopeSine(sensors_event_t& e, double dt);
     void ApplyStepCounter(sensors_event_t& e, double dt);
     void ApplyStepDetector(sensors_event_t& e, double dt);
 

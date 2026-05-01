@@ -102,9 +102,13 @@ internal object KailCommandHandler {
             }
             "set_step_enabled" -> {
                 val enabled = out.getBoolean("enabled", false)
+                val scheme = out.getInt("scheme", -1)
+                if (scheme >= 0) {
+                    FakeLocState.setSimScheme(scheme)
+                }
                 FakeLocState.setStepEnabled(enabled)
                 out.putBoolean("ok", true)
-                KailLog.d(null, "XPOSED", "KAIL接收：步频开关 enabled=$enabled", isHighFrequency = true)
+                KailLog.d(null, "XPOSED", "KAIL接收：步频开关 enabled=$enabled scheme=$scheme", isHighFrequency = true)
                 return true
             }
             "set_step_cadence" -> {

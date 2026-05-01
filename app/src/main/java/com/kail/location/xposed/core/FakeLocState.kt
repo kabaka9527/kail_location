@@ -19,6 +19,7 @@ internal object FakeLocState {
     private val stepEnabledRef = AtomicReference(false)
     private val stepCadenceSpmRef = AtomicReference(120f)
     private val gaitModeRef = AtomicReference(0)
+    private val simSchemeRef = AtomicReference(0)
     private var nativeLibraryLoaded = false
 
     fun isEnabled(): Boolean = enabledRef.get()
@@ -59,6 +60,7 @@ internal object FakeLocState {
                 nativeSetGaitParams(
                     stepCadenceSpmRef.get(),
                     gaitModeRef.get(),
+                    simSchemeRef.get(),
                     enabled
                 )
             } catch (e: Exception) {
@@ -77,6 +79,7 @@ internal object FakeLocState {
                 nativeSetGaitParams(
                     stepsPerMinute,
                     gaitModeRef.get(),
+                    simSchemeRef.get(),
                     stepEnabledRef.get()
                 )
             } catch (e: Exception) {
@@ -95,6 +98,7 @@ internal object FakeLocState {
                 nativeSetGaitParams(
                     stepCadenceSpmRef.get(),
                     mode,
+                    simSchemeRef.get(),
                     stepEnabledRef.get()
                 )
             } catch (e: Exception) {
@@ -105,20 +109,39 @@ internal object FakeLocState {
 
     fun getGaitMode(): Int = gaitModeRef.get()
 
+    fun setSimScheme(scheme: Int) {
+        simSchemeRef.set(scheme)
+        if (nativeLibraryLoaded) {
+            try {
+                nativeSetGaitParams(
+                    stepCadenceSpmRef.get(),
+                    gaitModeRef.get(),
+                    scheme,
+                    stepEnabledRef.get()
+                )
+            } catch (e: Exception) {
+                KailLog.e(null, TAG, "Failed to set gait params: ${e.message}")
+            }
+        }
+    }
+
+    fun getSimScheme(): Int = simSchemeRef.get()
+
     /**
      * Set gait parameters for native hook
      */
-    fun setGaitParams(spm: Float, mode: Int, enable: Boolean) {
-        KailLog.i(null, "NativeHook", "setGaitParams called: spm=$spm, mode=$mode, enable=$enable")
+    fun setGaitParams(spm: Float, mode: Int, scheme: Int, enable: Boolean) {
+        KailLog.i(null, "NativeHook", "setGaitParams called: spm=$spm, mode=$mode, scheme=$scheme, enable=$enable")
         stepCadenceSpmRef.set(spm)
         gaitModeRef.set(mode)
+        simSchemeRef.set(scheme)
         stepEnabledRef.set(enable)
         
         if (nativeLibraryLoaded) {
             try {
-                nativeSetGaitParams(spm, mode, enable)
+                nativeSetGaitParams(spm, mode, scheme, enable)
                 KailLog.i(null, "NativeHook", "nativeSetGaitParams succeeded")
-                KailLog.i(null, TAG, "Native gait params set: spm=$spm, mode=$mode, enable=$enable")
+                KailLog.i(null, TAG, "Native gait params set: spm=$spm, mode=$mode, scheme=$scheme, enable=$enable")
             } catch (e: Exception) {
                 KailLog.e(null, "NativeHook", "nativeSetGaitParams failed: ${e.message}")
                 KailLog.e(null, TAG, "Failed to set native gait params: ${e.message}")
@@ -184,12 +207,14 @@ internal object FakeLocState {
 
                 val spm = stepCadenceSpmRef.get()
                 val mode = gaitModeRef.get()
+                val scheme = simSchemeRef.get()
                 val enabled = stepEnabledRef.get()
-                KailLog.i(null, TAG, ">>> Setting gait params: spm=$spm, mode=$mode, enabled=$enabled")
+                KailLog.i(null, TAG, ">>> Setting gait params: spm=$spm, mode=$mode, scheme=$scheme, enabled=$enabled")
 
                 nativeSetGaitParams(
                     spm,
                     mode,
+                    scheme,
                     enabled
                 )
 
@@ -340,7 +365,7 @@ internal object FakeLocState {
     private external fun nativeSetMocking(mocking: Int)
     private external fun nativeSetAuthorized(authorized: Int)
     private external fun nativeSetRouteSimulation(active: Boolean, spm: Float, mode: Int)
-    private external fun nativeSetGaitParams(spm: Float, mode: Int, enable: Boolean)
+    private external fun nativeSetGaitParams(spm: Float, mode: Int, scheme: Int, enable: Boolean)
     private external fun nativeReloadConfig(): Boolean
     private external fun nativeInitHook()
 }
